@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String?  @map("password_hash") @db.VarChar(255)
+  googleId     String?  @unique @map("google_id") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  decks        Deck[]
+  reviewLogs   ReviewLog[]
+  streak       Streak?
+  deviceTokens DeviceToken[]
+  syncCursor   SyncCursor?
+  notificationSettings NotificationSettings?
+
+  @@map("users")
+}
+
+model Deck {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  title       String    @db.VarChar(100)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@index([userId])
+  @@map("decks")
+}
+
+model Card {
+  id             String    @id @default(uuid()) @db.Uuid
+  deckId         String    @map("deck_id") @db.Uuid
+  front          String    @db.Text
+  back           String    @db.Text
+  repetitions    Int       @default(0)
+  interval       Int       @default(0)
+  easinessFactor Float     @default(2.5) @map("easiness_factor")
+  nextReview     DateTime  @default(now()) @map("next_review")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  deck       Deck        @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  reviewLogs ReviewLog[]
+
+  @@index([deckId])
+  @@index([nextReview])
+  @@map("cards")
+}
+
+model Streak {
+  userId         String    @id @map("user_id") @db.Uuid
+  currentStreak  Int       @default(0) @map("current_streak")
+  longestStreak  Int       @default(0) @map("longest_streak")
+  lastStreakDate DateTime? @map("last_streak_date") @db.Date
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+model ReviewLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  cardId     String   @map("card_id") @db.Uuid
+  rating     Int
+  reviewedAt DateTime @default(now()) @map("reviewed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cardId])
+  @@map("review_logs")
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique @db.VarChar(512)
+  platform  String   @default("web") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model SyncCursor {
+  userId       String   @id @map("user_id") @db.Uuid
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sync_cursors")
+}
+
+model NotificationSettings {
+  userId          String  @id @map("user_id") @db.Uuid
+  enabled         Boolean @default(true)
+  reminderHour    Int     @default(20) @map("reminder_hour")
+  reminderMinute  Int     @default(0) @map("reminder_minute")
+  timezone        String  @default("Asia/Ho_Chi_Minh") @db.VarChar(100)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}

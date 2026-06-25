@@ -1,0 +1,23 @@
+{
+  "name": "flashcard-app",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace @flashcard/api dev\" \"yarn workspace @flashcard/web dev\"",
+    "dev:api": "yarn workspace @flashcard/api dev",
+    "dev:web": "yarn workspace @flashcard/web dev",
+    "build": "yarn workspace @flashcard/shared build && yarn workspace @flashcard/api build && yarn workspace @flashcard/web build",
+    "test": "yarn workspace @flashcard/shared test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "yarn workspace @flashcard/api prisma:migrate",
+    "db:generate": "yarn workspace @flashcard/api prisma:generate"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}
