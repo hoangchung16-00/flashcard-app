@@ -4,11 +4,16 @@
   "private": true,
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch",
-    "start": "node dist/main",
+    "dev": "nest build && concurrently -k \"nest build --watch --preserveWatchOutput\" \"nodemon --watch dist --delay 1 dist/main.js\"",
+    "dev:simple": "nest build && node dist/main.js",
+    "start": "node dist/main.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "prisma:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
     "@flashcard/shared": "1.0.0",
@@ -44,6 +49,8 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/uuid": "^10.0.0",
     "prisma": "^6.4.1",
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   }

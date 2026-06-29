@@ -57,6 +57,26 @@ yarn dev
 - Đồng bộ dữ liệu push/pull
 - Tìm kiếm deck/card
 - Push notification nhắc nhở (cần cấu hình Firebase)
+- **Dữ liệu mẫu** tự động khi mở app lần đầu
+
+## Dữ liệu mẫu (Demo)
+
+Khi mở app **lần đầu**, hệ thống tự tạo **3 bộ thẻ** với **17 flashcard**:
+
+| Bộ thẻ | Nội dung |
+|--------|----------|
+| Tiếng Anh hàng ngày | Hello, Thank you, Good morning... |
+| IELTS — Education | Curriculum, Scholarship, Tuition fee... |
+| Lập trình cơ bản | Variable, Function, API, Database... |
+
+Một số thẻ đã **due sẵn** để bạn ôn tập ngay trên Dashboard.
+
+**Tài khoản demo (server):** chạy `yarn db:seed` sau migrate để tạo:
+
+- Email: `demo@flashcard.app`
+- Mật khẩu: `demo123`
+
+Sau khi đăng nhập, dữ liệu đồng bộ lên cloud. Nếu bạn đã mở app trước đó mà không thấy dữ liệu, xóa site data của `localhost:3000` (IndexedDB + localStorage) rồi refresh.
 
 ## Cấu hình Firebase (tuỳ chọn)
 

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth-context';
+import { SeedInitializer } from '@/components/SeedInitializer';
 import { Sidebar } from '@/components/Sidebar';
 import { HeaderStats } from '@/components/HeaderStats';
 import './globals.css';
@@ -15,9 +16,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi">
-      <body>
+    <html lang="vi" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AuthProvider>
+          <SeedInitializer />
           <div className="flex min-h-screen">
             <Sidebar />
             <main className="flex flex-1 flex-col">

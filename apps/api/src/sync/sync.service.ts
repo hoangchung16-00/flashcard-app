@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { calculateSm2, type Rating } from '@flashcard/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { SeedService } from '../seed/seed.service';
 import { StreakService } from '../streak/streak.service';
 import type { SyncPushDto } from './dto/sync.dto';
 
@@ -9,6 +10,7 @@ export class SyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly streakService: StreakService,
+    private readonly seedService: SeedService,
   ) {}
 
   async push(userId: string, dto: SyncPushDto): Promise<{ syncedAt: string }> {
@@ -144,6 +146,11 @@ export class SyncService {
       create: { userId, lastSyncedAt: syncedAt },
       update: { lastSyncedAt: syncedAt },
     });
+
+    // Chỉ seed server khi user không có deck VÀ client không gửi dữ liệu guest lên
+    if (dto.decks.length === 0) {
+      await this.seedService.seedUserIfEmpty(userId);
+    }
 
     return { syncedAt: syncedAt.toISOString() };
   }

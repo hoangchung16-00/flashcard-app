@@ -1,16 +1,40 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { syncToServer } from '@/lib/store';
 
 export default function LoginPage() {
-  const { login, register, googleLogin } = useAuth();
+  const router = useRouter();
+  const { login, register, refreshAuth } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent): void {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data?.type === 'google-auth-success') {
+        setIsGoogleLoading(false);
+        refreshAuth();
+        void syncToServer().then(() => router.push('/'));
+      }
+
+      if (event.data?.type === 'google-auth-error') {
+        setIsGoogleLoading(false);
+        setError(event.data.error ?? 'Đăng nhập Google thất bại');
+      }
+    }
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [router, refreshAuth]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,29 +46,53 @@ export default function LoginPage() {
       : await login(email, password);
 
     if (err) setError(err);
+    else router.push('/');
     setIsLoading(false);
   }
 
-  async function handleGoogleLogin() {
+  function handleGoogleLogin() {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) {
-      setError('Google OAuth chưa được cấu hình');
+      setError('Google OAuth chưa được cấu hình (NEXT_PUBLIC_GOOGLE_CLIENT_ID)');
       return;
     }
 
-    const redirectUri = `${window.location.origin}/login`;
-    const scope = 'openid email profile';
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token id_token&scope=${encodeURIComponent(scope)}&nonce=${Date.now()}`;
+    setError(null);
+    setIsGoogleLoading(true);
 
-    const popup = window.open(url, 'google-login', 'width=500,height=600');
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const state = crypto.randomUUID();
+    const nonce = crypto.randomUUID();
+
+    localStorage.setItem('google_oauth_state', state);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'id_token',
+      scope: 'openid email profile',
+      state,
+      nonce,
+      prompt: 'select_account',
+    });
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    const popup = window.open(
+      url,
+      'google-login',
+      'width=500,height=650,scrollbars=yes',
+    );
+
     if (!popup) {
-      setError('Không thể mở cửa sổ đăng nhập Google');
+      setIsGoogleLoading(false);
+      setError('Trình duyệt chặn popup — hãy cho phép popup cho localhost');
       return;
     }
 
-    const checkClosed = setInterval(() => {
+    const timer = setInterval(() => {
       if (popup.closed) {
-        clearInterval(checkClosed);
+        clearInterval(timer);
+        setIsGoogleLoading(false);
       }
     }, 500);
   }
@@ -93,10 +141,11 @@ export default function LoginPage() {
 
         <button
           type="button"
-          onClick={() => void handleGoogleLogin()}
-          className="w-full rounded-lg border border-slate-300 py-2 font-medium text-slate-700 hover:bg-slate-50"
+          onClick={handleGoogleLogin}
+          disabled={isGoogleLoading}
+          className="w-full rounded-lg border border-slate-300 py-2 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
-          Đăng nhập với Google
+          {isGoogleLoading ? 'Đang mở Google...' : 'Đăng nhập với Google'}
         </button>
 
         <p className="text-center text-sm text-slate-600">

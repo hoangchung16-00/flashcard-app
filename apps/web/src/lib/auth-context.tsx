@@ -18,6 +18,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string) => Promise<string | null>;
   googleLogin: (idToken: string) => Promise<string | null>;
+  refreshAuth: () => void;
   logout: () => void;
 }
 
@@ -89,6 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [handleAuthSuccess],
   );
 
+  const refreshAuth = useCallback(() => {
+    setIsAuthenticated(!!getAccessToken());
+  }, []);
+
   const logout = useCallback(() => {
     clearTokens();
     setIsAuthenticated(false);
@@ -101,9 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       googleLogin,
+      refreshAuth,
       logout,
     }),
-    [isAuthenticated, isLoading, login, register, googleLogin, logout],
+    [isAuthenticated, isLoading, login, register, googleLogin, refreshAuth, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

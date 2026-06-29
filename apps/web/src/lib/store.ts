@@ -135,6 +135,58 @@ export function queueSync(): void {
   }, 1000);
 }
 
+/** Gộp deck trùng tên (sau guest login + server seed) */
+async function dedupeDecksByTitle(): Promise<void> {
+  const allDecks = await db.decks.filter((d) => !d.deletedAt).toArray();
+  const titleGroups = new Map<string, LocalDeck[]>();
+
+  for (const deck of allDecks) {
+    const key = deck.title.toLowerCase().trim();
+    const group = titleGroups.get(key) ?? [];
+    group.push(deck);
+    titleGroups.set(key, group);
+  }
+
+  const now = new Date().toISOString();
+
+  for (const group of titleGroups.values()) {
+    if (group.length <= 1) continue;
+
+    const scored = await Promise.all(
+      group.map(async (deck) => {
+        const cardCount = await db.cards
+          .where('deckId')
+          .equals(deck.id)
+          .filter((c) => !c.deletedAt)
+          .count();
+        return { deck, cardCount };
+      }),
+    );
+
+    scored.sort((a, b) => {
+      if (a.deck.syncStatus === 'synced' && b.deck.syncStatus !== 'synced') {
+        return -1;
+      }
+      if (b.deck.syncStatus === 'synced' && a.deck.syncStatus !== 'synced') {
+        return 1;
+      }
+      return b.cardCount - a.cardCount;
+    });
+
+    for (let i = 1; i < scored.length; i++) {
+      const removeId = scored[i].deck.id;
+      await db.cards
+        .where('deckId')
+        .equals(removeId)
+        .modify({ deletedAt: now, updatedAt: now });
+      await db.decks.update(removeId, {
+        deletedAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+}
+
 export async function syncToServer(): Promise<void> {
   if (!isOnline() || !getAccessToken()) return;
 
@@ -203,6 +255,7 @@ export async function syncToServer(): Promise<void> {
       id: 'main',
       lastSyncedAt: pullRes.data.syncedAt,
     });
+    await dedupeDecksByTitle();
   }
 }
 
